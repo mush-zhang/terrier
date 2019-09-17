@@ -9,11 +9,6 @@
 #include "parser/table_ref.h"
 
 namespace terrier {
-
-namespace binder {
-class BindNodeVisitor;
-}  // namespace binder
-
 namespace parser {
 
 enum OrderType { kOrderAsc, kOrderDesc };
@@ -355,11 +350,6 @@ class SelectStatement : public SQLStatement {
   common::ManagedPointer<LimitDescription> GetSelectLimit() { return common::ManagedPointer(limit_); }
 
   /**
-   * @return depth of the select statement
-   */
-  const int GetDepth() { return depth_; }
-
-  /**
    * Adds a select statement child as a union target.
    * @param select_stmt select statement to union with
    */
@@ -413,7 +403,6 @@ class SelectStatement : public SQLStatement {
   void FromJson(const nlohmann::json &j) override;
 
  private:
-  friend class binder::BindNodeVisitor;
   std::vector<common::ManagedPointer<AbstractExpression>> select_;
   bool select_distinct_;
   std::unique_ptr<TableRef> from_;
@@ -422,17 +411,6 @@ class SelectStatement : public SQLStatement {
   std::unique_ptr<OrderByDescription> order_by_;
   std::unique_ptr<LimitDescription> limit_;
   std::unique_ptr<SelectStatement> union_select_;
-  int depth_ = -1;
-
-  /**
-   * @param select List of select columns
-   */
-  void SetSelectColumns(std::vector<common::ManagedPointer<AbstractExpression>> select) { select_ = std::move(select); }
-
-  /**
-   * @param depth Depth of the select statement
-   */
-  void SetDepth(int depth) { depth_ = depth; }
 };
 
 DEFINE_JSON_DECLARATIONS(SelectStatement);

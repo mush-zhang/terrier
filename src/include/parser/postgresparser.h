@@ -13,9 +13,7 @@ namespace parser {
 
 class ParseResult {
  public:
-  void AddStatement(std::unique_ptr<SQLStatement> statement) {
-    statements_.emplace_back(std::move(statement));
-  }
+  void AddStatement(std::unique_ptr<SQLStatement> statement) { statements_.emplace_back(std::move(statement)); }
 
   void AddExpression(std::unique_ptr<AbstractExpression> expression) {
     expressions_.emplace_back(std::move(expression));
