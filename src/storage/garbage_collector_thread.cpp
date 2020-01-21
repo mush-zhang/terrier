@@ -1,6 +1,8 @@
 #include "storage/garbage_collector_thread.h"
 
 namespace terrier::storage {
+
+// TODO(John) This should probably be inlined into the header...
 GarbageCollectorThread::GarbageCollectorThread(const common::ManagedPointer<GarbageCollector> gc,
                                                const std::chrono::milliseconds gc_period)
     : gc_(gc),
