@@ -2,7 +2,7 @@
 
 namespace terrier::storage {
 
-// TODO(John) This should probably be inlined into the header...
+// TODO(John:GC) This should probably be inlined into the header...
 GarbageCollectorThread::GarbageCollectorThread(const common::ManagedPointer<GarbageCollector> gc,
                                                const std::chrono::milliseconds gc_period)
     : gc_(gc),
