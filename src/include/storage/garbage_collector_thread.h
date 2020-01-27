@@ -20,7 +20,12 @@ class GarbageCollectorThread {
    * @param gc pointer to the garbage collector object to be run on this thread
    * @param gc_period sleep time between GC invocations
    */
-  GarbageCollectorThread(common::ManagedPointer<GarbageCollector> gc, std::chrono::milliseconds gc_period);
+  GarbageCollectorThread(const common::ManagedPointer<GarbageCollector> gc, const std::chrono::milliseconds gc_period)
+      : gc_(gc),
+        run_gc_(true),
+        gc_paused_(false),
+        gc_period_(gc_period),
+        gc_thread_(std::thread([this] { GCThreadLoop(); })) {}
 
   ~GarbageCollectorThread() { StopGC(); }
 
