@@ -72,7 +72,7 @@ class TransactionManager {
    * @param thread_context context for the calling thread.
    * @return transaction context for the newly begun transaction
    */
-  TransactionContext *BeginTransaction(TransactionThreadContext *thread_context);
+  TransactionContext *BeginTransaction(TransactionThreadContext *thread_context = nullptr);
 
   /**
    * Commits a transaction, making all of its changes visible to others.
