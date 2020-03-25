@@ -9,7 +9,7 @@
 #include "transaction/deferred_action_manager.h"
 
 namespace terrier::transaction {
-TransactionContext *TransactionManager::BeginTransaction() {
+TransactionContext *TransactionManager::BeginTransaction(TransactionThreadContext *thread_context) {
   timestamp_t start_time;
   TransactionContext *result;
 
@@ -20,7 +20,7 @@ TransactionContext *TransactionManager::BeginTransaction() {
   // start the operating unit resource tracker
   if (txn_metrics_enabled) common::thread_context.resource_tracker_.Start();
   start_time = timestamp_manager_->BeginTransaction();
-  result = new TransactionContext(start_time, start_time + INT64_MIN, buffer_pool_, log_manager_);
+  result = new TransactionContext(start_time, start_time + INT64_MIN, buffer_pool_, log_manager_, thread_context);
   // Ensure we do not return from this function if there are ongoing write commits
   txn_gate_.Traverse();
 

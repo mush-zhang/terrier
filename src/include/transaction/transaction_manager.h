@@ -44,10 +44,34 @@ class TransactionManager {
   }
 
   /**
+   * Registers a worker to the transaction manager, such that the transaction manager is aware of
+   * transactions being started and ended on that worker thread. This is technically not necessary,
+   * but enables optimizations to the commit process.
+   *
+   * @param worker_id  id of the worker thread to be registered
+   * @return a constructed TransactionThreadContext with the given id
+   */
+  TransactionThreadContext *RegisterWorker(worker_id_t worker_id) {
+    // TODO(Tianyu): Implement
+    return nullptr;
+  }
+
+  /**
+   * Deregisters a worker to the transaction manager so that we no longer expect transactions to begin
+   * or end on the worker thread.
+   *
+   * @param thread context of the thread to unregister
+   */
+  void UnregisterWorker(TransactionThreadContext *thread) {
+    // TODO(Tianyu): Implement
+  }
+
+  /**
    * Begins a transaction.
+   * @param thread_context context for the calling thread.
    * @return transaction context for the newly begun transaction
    */
-  TransactionContext *BeginTransaction();
+  TransactionContext *BeginTransaction(TransactionThreadContext *thread_context);
 
   /**
    * Commits a transaction, making all of its changes visible to others.
