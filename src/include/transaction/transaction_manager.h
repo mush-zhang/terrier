@@ -13,6 +13,7 @@
 #include "transaction/timestamp_manager.h"
 #include "transaction/transaction_context.h"
 #include "transaction/transaction_defs.h"
+#include "transaction/transaction_thread_context.h"
 
 namespace terrier::transaction {
 /**
