@@ -11,6 +11,8 @@ static constexpr uint64_t HASH_VAL = 13;
 
 STRONG_TYPEDEF(timestamp_t, uint64_t);
 
+STRONG_TYPEDEF(worker_id_t, uint32_t);
+
 // Invalid txn timestamp. Used for validation.
 static constexpr timestamp_t INVALID_TXN_TIMESTAMP = timestamp_t(INT64_MIN);
 
