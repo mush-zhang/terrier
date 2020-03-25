@@ -19,7 +19,7 @@ TransactionContext *TransactionManager::BeginTransaction(TransactionThreadContex
 
   // start the operating unit resource tracker
   if (txn_metrics_enabled) common::thread_context.resource_tracker_.Start();
-  start_time = timestamp_manager_->BeginTransaction();
+  start_time = timestamp_manager_->BeginTransaction(thread_context == nullptr ? worker_id_t(0) : thread_context->GetWorkerId());
   result = new TransactionContext(start_time, start_time + INT64_MIN, buffer_pool_, log_manager_, thread_context);
   // Ensure we do not return from this function if there are ongoing write commits
   txn_gate_.Traverse();
@@ -47,7 +47,8 @@ void TransactionManager::LogCommit(TransactionContext *const txn, const timestam
   } else {
     // Otherwise, logging is disabled. We should pretend to have serialized and flushed the record so the rest of the
     // system proceeds correctly
-    timestamp_manager_->RemoveTransaction(txn->StartTime());
+    const auto txn_thread_context = txn->GetThreadContext();
+    timestamp_manager_->RemoveTransaction(txn->StartTime(), txn_thread_context == nullptr ? worker_id_t(0) : txn_thread_context->GetWorkerId());
     commit_callback(commit_callback_arg);
   }
   txn->redo_buffer_.Finalize(true);
@@ -166,7 +167,8 @@ void TransactionManager::LogAbort(TransactionContext *const txn) {
     // not yet logged out
     txn->redo_buffer_.Finalize(false);
     // Since there is nothing to log, we can mark it as processed
-    timestamp_manager_->RemoveTransaction(txn->StartTime());
+    const auto txn_thread_context = txn->GetThreadContext();
+    timestamp_manager_->RemoveTransaction(txn->StartTime(), txn_thread_context == nullptr ? worker_id_t(0) : txn_thread_context->GetWorkerId());
   }
 }
 

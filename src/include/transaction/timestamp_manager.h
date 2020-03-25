@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <thread>
 #include <unordered_set>
 #include <vector>
 
@@ -19,7 +20,7 @@ class TransactionManager;
  */
 class TimestampManager {
  public:
-  TimestampManager() : curr_running_txns_(HASH_VAL, std::unordered_set<timestamp_t>()), curr_running_txns_latch_(HASH_VAL) {};
+  TimestampManager() : thread_count_(std::thread::hardware_concurrency()), curr_running_txns_(thread_count_, std::unordered_set<timestamp_t>()), curr_running_txns_latch_(thread_count_) {};
 
   ~TimestampManager() {
     TERRIER_ASSERT(!HasRunningTxn(),
@@ -82,12 +83,12 @@ class TimestampManager {
     return false;
   }
 
-  timestamp_t BeginTransaction() {
+  timestamp_t BeginTransaction(worker_id_t worker_id) {
     timestamp_t start_time;
     {
       // common::SpinLatch::ScopedSpinLatch outer_guard(&temp_latch_);
       start_time = time_++;
-      const auto idx = uint64_t(start_time) % HASH_VAL;
+      const auto idx = static_cast<unsigned int>(worker_id) % thread_count_;
       {
         common::SpinLatch::ScopedSpinLatch running_guard(&curr_running_txns_latch_[idx]);
         // There is a three-way race that needs to be prevented.  Specifically, we
@@ -112,27 +113,29 @@ class TimestampManager {
    * Remove a timestamp from active txn set
    * @param timestamp timestamp to remove
    */
-  void RemoveTransaction(timestamp_t timestamp);
+  void RemoveTransaction(timestamp_t timestamp, worker_id_t worker_id);
 
   /**
    * Bulk remove a set of timestamps from the active txn set. Only grabs the curr_running_txns_latch_ once for all the
    * timestamps.
    * @param timestamps vector of timestamps to remove
    */
-  void RemoveTransactions(const std::vector<timestamp_t> &timestamps);
+  void RemoveTransactions(const std::vector<timestamp_t> &timestamps, const std::vector<worker_id_t> &worker_ids);
+  // TODO(Ling): input vector of <worker_id, timestamp> and sort by worker_id may require fewer latch acquisition
 
   // TODO(Tianyu): Timestamp generation needs to be more efficient (batches)
   // TODO(Tianyu): We don't handle timestamp wrap-arounds. I doubt this would be an issue any time soon.
   std::atomic<timestamp_t> time_{INITIAL_TXN_TIMESTAMP};
   // We cache the oldest txn start time
   std::atomic<timestamp_t> cached_oldest_txn_start_time_{INITIAL_TXN_TIMESTAMP};
+
+  uint8_t thread_count_;
+
   // TODO(Matt): consider a different data structure if this becomes a measured bottleneck
   // TODO(Gus): This data structure initially only held items in the order of # of workers. With the logging change, it
   // can hold many more, since txns are only removed when serialized. We should consider if there is a possible better
   // data structure
   std::vector<std::unordered_set<timestamp_t>> curr_running_txns_;
   mutable std::vector<common::SpinLatch> curr_running_txns_latch_;
-
-  // mutable common::SpinLatch temp_latch_;
 };
 }  // namespace terrier::transaction

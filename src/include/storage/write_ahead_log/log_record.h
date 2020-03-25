@@ -73,6 +73,7 @@ class LogRecord {
   /* Header common to all log records */
   LogRecordType type_;
   uint32_t size_;
+  transaction::worker_id_t worker_id_;
   transaction::timestamp_t txn_begin_;
   // This needs to be aligned to 8 bytes to ensure the real size of RedoRecord (plus actual ProjectedRow) is also
   // a multiple of 8.

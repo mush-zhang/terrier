@@ -86,10 +86,10 @@ bool LogSerializerTask::Process() {
     // Mark the last buffer that was written to as full
     if (filled_buffer_ != nullptr) HandFilledBufferToWriter();
 
-    // Bulk remove all the transactions we serialized. This prevents having to take the TimestampManager's latch once
+    // TODO(Ling): Bulk remove all the transactions we serialized. This prevents having to take the TimestampManager's latch once
     // for each timestamp we remove.
     for (const auto &txns : serialized_txns_) {
-      txns.first->RemoveTransactions(txns.second);
+      txns.first->RemoveTransactions(txns.second.first, txns.second.second);
     }
     serialized_txns_.clear();
   }
@@ -146,15 +146,19 @@ std::pair<uint64_t, uint64_t> LogSerializerTask::SerializeBuffer(
         if (!commit_record->IsReadOnly()) num_bytes += SerializeRecord(record);
         commits_in_buffer_.emplace_back(commit_record->CommitCallback(), commit_record->CommitCallbackArg());
         // Once serialization is done, we notify the txn manager to let GC know this txn is ready to clean up
-        serialized_txns_[commit_record->TimestampManager()].push_back(record.TxnBegin());
+        const auto txn_thread_context = commit_record->Txn()->GetThreadContext();
+        serialized_txns_[commit_record->TimestampManager()].first.push_back(record.TxnBegin());
+        serialized_txns_[commit_record->TimestampManager()].second.push_back(txn_thread_context == nullptr ? transaction::worker_id_t(0) : txn_thread_context->GetWorkerId());
         break;
       }
 
       case (LogRecordType::ABORT): {
         // If an abort record shows up at all, the transaction cannot be read-only
         num_bytes += SerializeRecord(record);
-        auto *abord_record = record.GetUnderlyingRecordBodyAs<AbortRecord>();
-        serialized_txns_[abord_record->TimestampManager()].push_back(record.TxnBegin());
+        auto *abort_record = record.GetUnderlyingRecordBodyAs<AbortRecord>();
+        const auto txn_thread_context = abort_record->Txn()->GetThreadContext();
+        serialized_txns_[abort_record->TimestampManager()].first.push_back(record.TxnBegin());
+        serialized_txns_[abort_record->TimestampManager()].second.push_back(txn_thread_context == nullptr ? transaction::worker_id_t(0) : txn_thread_context->GetWorkerId());
         break;
       }
 

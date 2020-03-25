@@ -7,7 +7,7 @@ namespace terrier::transaction {
 timestamp_t TimestampManager::OldestTransactionStartTime() {
   // common::SpinLatch::ScopedSpinLatch outer_guard(&temp_latch_);
   std::vector<timestamp_t> mins;
-  for (size_t i = 0; i < HASH_VAL; i++) {
+  for (size_t i = 0; i < thread_count_; i++) {
     {
       common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_[i]);
       const auto &oldest_txn = std::min_element(curr_running_txns_[i].cbegin(), curr_running_txns_[i].cend());
@@ -22,20 +22,18 @@ timestamp_t TimestampManager::OldestTransactionStartTime() {
 
 timestamp_t TimestampManager::CachedOldestTransactionStartTime() { return cached_oldest_txn_start_time_.load(); }
 
-void TimestampManager::RemoveTransaction(timestamp_t timestamp) {
-  // common::SpinLatch::ScopedSpinLatch outer_guard(&temp_latch_);
-  const auto idx = uint64_t(timestamp) % HASH_VAL;
+void TimestampManager::RemoveTransaction(timestamp_t timestamp, worker_id_t worker_id) {
+  const auto idx = static_cast<unsigned int>(worker_id) % thread_count_;
   common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_[idx]);
   const size_t ret UNUSED_ATTRIBUTE = curr_running_txns_[idx].erase(timestamp);
   TERRIER_ASSERT(ret == 1, "erased timestamp did not exist");
 }
 
-void TimestampManager::RemoveTransactions(const std::vector<terrier::transaction::timestamp_t> &timestamps) {
-  // common::SpinLatch::ScopedSpinLatch outer_guard(&temp_latch_);
-  for (const auto &timestamp : timestamps) {
-    const auto idx = uint64_t(timestamp) % HASH_VAL;
+void TimestampManager::RemoveTransactions(const std::vector<terrier::transaction::timestamp_t> &timestamps, const std::vector<worker_id_t> &worker_ids) {
+  for (size_t i = 0; i < timestamps.size(); i++) {
+    const auto idx = static_cast<unsigned int>(worker_ids[i]) % thread_count_;
     common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_[idx]);
-    const size_t ret UNUSED_ATTRIBUTE = curr_running_txns_[idx].erase(timestamp);
+    const size_t ret UNUSED_ATTRIBUTE = curr_running_txns_[idx].erase(timestamps[i]);
     TERRIER_ASSERT(ret == 1, "erased timestamp did not exist");
   }
 }
