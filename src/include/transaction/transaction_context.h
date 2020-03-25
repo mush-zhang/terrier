@@ -11,6 +11,7 @@
 #include "storage/tuple_access_strategy.h"
 #include "storage/undo_record.h"
 #include "storage/write_ahead_log/log_record.h"
+#include "transaction/transaction_thread_context.h"
 #include "transaction/transaction_util.h"
 
 namespace terrier::storage {
@@ -42,14 +43,17 @@ class TransactionContext {
    * MVCC semantics
    * @param buffer_pool the buffer pool to draw this transaction's undo buffer from
    * @param log_manager pointer to log manager in the system, or nullptr, if logging is disabled
+   * @param worker_thread the pointer to the context of the worker thread
    */
   TransactionContext(const timestamp_t start, const timestamp_t finish,
                      const common::ManagedPointer<storage::RecordBufferSegmentPool> buffer_pool,
-                     const common::ManagedPointer<storage::LogManager> log_manager)
+                     const common::ManagedPointer<storage::LogManager> log_manager,
+                     TransactionThreadContext *worker_thread = nullptr)
       : start_time_(start),
         finish_time_(finish),
         undo_buffer_(buffer_pool.Get()),
-        redo_buffer_(log_manager.Get(), buffer_pool.Get()) {}
+        redo_buffer_(log_manager.Get(), buffer_pool.Get()),
+        worker_thread_(worker_thread) {}
 
   /**
    * @warning In the src/ folder this should only be called by the Garbage Collector to adhere to MVCC semantics. Tests
@@ -60,6 +64,12 @@ class TransactionContext {
   ~TransactionContext() {
     for (const byte *ptr : loose_ptrs_) delete[] ptr;
   }
+
+  /**
+   * Get the thread context that this txn is running on
+   * @return the pointer to the thread context
+   */
+  TransactionThreadContext *GetThreadContext() { return worker_thread_; }
 
   /**
    * @warning Unless you are the garbage collector, this method is unlikely to be of use.
@@ -244,6 +254,10 @@ class TransactionContext {
   // cannot be allowed to commit. Currently, it is flipped by indexes (on unique-key conflicts) or SqlTable (write-write
   // conflicts) and checked in Commit().
   bool must_abort_ = false;
+
+  // A transaction always enters and leaves the system on the same thread, namely the thread dispatched to handle the
+  // client connection. Some localized information can be stored about the thread in order to enable optimization.
+  TransactionThreadContext *worker_thread_;
 
   /**
    * @warning This method is ONLY for recovery
