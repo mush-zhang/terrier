@@ -27,7 +27,7 @@ class RandomDataTableTransaction {
    * Initializes a new RandomDataTableTransaction to work on the given test object
    * @param test_object the test object that runs this transaction
    */
-  explicit RandomDataTableTransaction(LargeDataTableBenchmarkObject *test_object);
+  RandomDataTableTransaction(LargeDataTableBenchmarkObject *test_object, transaction::TransactionThreadContext *thread_context);
 
   /**
    * Destructs a random workload transaction
