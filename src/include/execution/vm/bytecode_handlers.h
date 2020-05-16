@@ -82,6 +82,9 @@ VM_OP_HOT void OpNot(bool *const result, const bool input) { *result = !input; }
   /* Primitive negation */                                                                 \
   VM_OP_HOT void OpNeg##_##type(type *result, type input) { *result = -input; }            \
                                                                                            \
+  /* Primitive absolute */                                                                 \
+  VM_OP_HOT void OpAbs##_##type(type *result, type input) { *result = -input; }            \
+                                                                                           \
   /* Primitive division (no zero-check) */                                                 \
   VM_OP_HOT void OpDiv##_##type(type *result, type lhs, type rhs) {                        \
     TERRIER_ASSERT(rhs != 0, "Division-by-zero error!");                                   \
