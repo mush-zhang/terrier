@@ -52,7 +52,7 @@ public class FunctionsTest extends TestUtility {
         pstmt.setInt(idx++, 123);
         pstmt.setDouble(idx++, 12.34);
         pstmt.setString(idx++, "123456");
-        pstmt.setString(idx++, "AbCdEf");
+        pstmt.setString(idx++, "  aBcDefa   ");
 //         pstmt.setBoolean(idx++, true);
         pstmt.setInt(idx++, 0);
 //         pstmt.setBoolean(idx++, false);
@@ -129,7 +129,23 @@ public class FunctionsTest extends TestUtility {
         }
         assertNoMoreRows(rs);
     }
-     
+
+    private void checkStringFuncTrim(String func_name, String col_name, String trim_str, boolean is_null, String expected) throws SQLException {
+        String sql = String.format("SELECT %s(%s, %s) AS result FROM data WHERE is_null = %s",
+                                   func_name, col_name, trim_str, (is_null ? 1 : 0));
+
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        boolean exists = rs.next();
+        assert(exists);
+        if (is_null) {
+            checkStringRow(rs, new String[]{"result"}, new String[]{null});
+        } else {
+            checkStringRow(rs, new String[]{"result"}, new String[]{expected});
+        }
+        assertNoMoreRows(rs);
+    }
+
     /**
      * Tests usage of trig udf functions
      * #744 test
@@ -155,8 +171,17 @@ public class FunctionsTest extends TestUtility {
      */
     @Test
     public void testLower() throws SQLException {
-        checkStringFunc("lower", "str_a_val", false, "abcdef");
+        checkStringFunc("lower", "str_a_val", false, "  abcdefa   ");
         checkStringFunc("lower", "str_a_val", true, null);
+    }
+
+
+    @Test
+    public void testTrim() throws SQLException {
+        checkStringFunc("trim", "str_a_val", false, "aBcDefa");
+        checkStringFuncTrim("trim", "str_a_val", "' a'", false, "BcDef");
+        checkStringFunc("trim", "str_a_val", true, null);
+
     }
 
 }

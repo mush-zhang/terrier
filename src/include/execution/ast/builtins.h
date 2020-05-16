@@ -244,7 +244,9 @@ namespace terrier::execution::ast {
   F(GetParamString, getParamString)                                     \
                                                                         \
   /* String functions */                                                \
-  F(Lower, lower)
+  F(Lower, lower)                                                       \
+  F(Trim, trim)                                                         \
+  F(Trim2, trim2)
 
 /**
  * Enum of builtins
