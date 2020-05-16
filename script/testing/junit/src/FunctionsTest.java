@@ -151,7 +151,7 @@ public class FunctionsTest extends TestUtility {
     }
     @Test
     public void testAbs() throws SQLException {
-        checkDoubleFunc("abs", "double_val", false, -0.230318);
+        checkDoubleFunc("abs", "double_val", false, 12.34);
         checkDoubleFunc("abs", "double_val", true, null);
     }
 

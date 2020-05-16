@@ -37,10 +37,6 @@ TEST_F(ArithmeticFunctionsTests, IntegerValue) {
     result = Integer(0);
     ArithmeticFunctions::IntDiv(&result, a, b, &div_by_zero);
     EXPECT_TRUE(result.is_null_);
-
-    result = Integer(0);
-    ArithmeticFunctions::Abs(&result, a);
-    EXPECT_TRUE(result.is_null_);
   }
 
   // Proper
@@ -134,10 +130,6 @@ TEST_F(ArithmeticFunctionsTests, RealValue) {
     bool div_by_zero = false;
     result = Real(0.0);
     ArithmeticFunctions::Div(&result, a, b, &div_by_zero);
-    EXPECT_TRUE(result.is_null_);
-
-    result = Real(0.0);
-    ArithmeticFunctions::Abs(&result, a);
     EXPECT_TRUE(result.is_null_);
   }
 

@@ -2537,7 +2537,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::Cot:
     case ast::Builtin::Sin:
     case ast::Builtin::Tan:
-    case ast::Builtin::Abs:  {
+    case ast::Builtin::Abs: {
       CheckMathTrigCall(call, builtin);
       break;
     }
