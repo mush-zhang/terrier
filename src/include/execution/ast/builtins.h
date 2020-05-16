@@ -151,6 +151,7 @@ namespace terrier::execution::ast {
   F(Cot, cot)                                                           \
   F(Sin, sin)                                                           \
   F(Tan, tan)                                                           \
+  F(Abs, abs)                                                           \
                                                                         \
   /* Generic */                                                         \
   F(SizeOf, sizeOf)                                                     \
@@ -244,9 +245,15 @@ namespace terrier::execution::ast {
   F(GetParamString, getParamString)                                     \
                                                                         \
   /* String functions */                                                \
-  F(Lower, lower)                                                       \
-                                                                        \
-  F(Abs, abs)
+  F(Lower, lower)                                                       \                                                                        \
+  F(Trim, trim)                                                         \
+  F(Trim2, trim2)                                                       \
+  F(Upper, upper)                                                       \
+  F(Left, left)                                                         \
+  F(Right, right)                                                       \
+  F(Repeat, repeat)                                                     \
+  F(Reverse, reverse)
+    
 /**
  * Enum of builtins
  */

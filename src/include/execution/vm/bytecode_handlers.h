@@ -1421,7 +1421,13 @@ VM_OP_WARM void OpSubstring(terrier::execution::exec::ExecutionContext *ctx, ter
 }
 
 VM_OP_WARM void OpTrim(terrier::execution::exec::ExecutionContext *ctx, terrier::execution::sql::StringVal *result,
-                       const terrier::execution::sql::StringVal *str, const terrier::execution::sql::StringVal *chars) {
+                       const terrier::execution::sql::StringVal *str) {
+  terrier::execution::sql::StringFunctions::Trim(ctx, result, *str);
+}
+
+VM_OP_WARM void OpTrim2(terrier::execution::exec::ExecutionContext *ctx, terrier::execution::sql::StringVal *result,
+                        const terrier::execution::sql::StringVal *str,
+                        const terrier::execution::sql::StringVal *chars) {
   terrier::execution::sql::StringFunctions::Trim(ctx, result, *str, *chars);
 }
 
