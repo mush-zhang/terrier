@@ -2261,6 +2261,8 @@ void Sema::CheckBuiltinStringCall(ast::CallExpr *call, ast::Builtin builtin) {
       break;
     }
     case ast::Builtin::Trim:
+    case ast::Builtin::Reverse:
+    case ast::Builtin::Upper:
     case ast::Builtin::Lower: {
       // check to make sure this function has two arguments
       if (!CheckArgCount(call, 2)) {
@@ -2281,6 +2283,44 @@ void Sema::CheckBuiltinStringCall(ast::CallExpr *call, ast::Builtin builtin) {
       }
       if (!resolved_type->IsSpecificBuiltin(ast::BuiltinType::StringVal)) {
         ReportIncorrectCallArg(call, 1, ast::StringType::Get(GetContext()));
+        return;
+      }
+
+      // this function returns a string
+      sql_type = ast::BuiltinType::StringVal;
+      break;
+    }
+    case ast::Builtin::Repeat:
+    case ast::Builtin::Left:
+    case ast::Builtin::Right: {
+      // check to make sure this function has three arguments
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+
+      // checking to see if the first argument is an execution context
+      auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
+      if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), exec_ctx_kind)) {
+        ReportIncorrectCallArg(call, 0, GetBuiltinType(exec_ctx_kind)->PointerTo());
+        return;
+      }
+
+      // checking to see if the second argument is a string
+      auto *resolved_type = Resolve(call->Arguments()[1]);
+      if (resolved_type == nullptr) {
+        return;
+      }
+      if (!resolved_type->IsSpecificBuiltin(ast::BuiltinType::StringVal)) {
+        ReportIncorrectCallArg(call, 1, ast::StringType::Get(GetContext()));
+        return;
+      }
+
+      resolved_type = Resolve(call->Arguments()[2]);
+      if (resolved_type == nullptr) {
+        return;
+      }
+      if (!resolved_type->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Integer));
         return;
       }
 
@@ -2637,7 +2677,12 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::Trim:
     case ast::Builtin::Trim2:
-    case ast::Builtin::Lower: {
+    case ast::Builtin::Lower:
+    case ast::Builtin::Reverse:
+    case ast::Builtin::Repeat:
+    case ast::Builtin::Left:
+    case ast::Builtin::Right:
+    case ast::Builtin::Upper: {
       CheckBuiltinStringCall(call, builtin);
       break;
     }

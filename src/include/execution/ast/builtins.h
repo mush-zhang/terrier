@@ -246,7 +246,12 @@ namespace terrier::execution::ast {
   /* String functions */                                                \
   F(Lower, lower)                                                       \
   F(Trim, trim)                                                         \
-  F(Trim2, trim2)
+  F(Trim2, trim2)                                                       \
+  F(Upper, upper)                                                       \
+  F(Left, left)                                                         \
+  F(Right, right)                                                       \
+  F(Repeat, repeat)                                                     \
+  F(Reverse, reverse)
 
 /**
  * Enum of builtins
