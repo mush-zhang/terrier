@@ -11,7 +11,7 @@
 #include "transaction/transaction_context.h"
 #include "type/type_id.h"
 
-#define HIGHEST_BUILTIN_PROC_ID catalog::postgres::UPPER_PRO_OID
+#define HIGHEST_BUILTIN_PROC_ID catalog::postgres::ABS_REAL_PRO_OID
 #define IS_BUILTIN_PROC(x) (x < HIGHEST_BUILTIN_PROC_ID)
 
 namespace terrier::catalog::postgres {
@@ -83,6 +83,8 @@ constexpr proc_oid_t LEFT_PRO_OID = proc_oid_t(113);
 constexpr proc_oid_t REPEAT_PRO_OID = proc_oid_t(117);
 constexpr proc_oid_t REVERSE_PRO_OID = proc_oid_t(118);
 constexpr proc_oid_t RIGHT_PRO_OID = proc_oid_t(119);
+constexpr proc_oid_t ABS_INT_PRO_OID = proc_oid_t(126);
+constexpr proc_oid_t ABS_REAL_PRO_OID = proc_oid_t(145);
 
 constexpr proc_oid_t TRIM_PRO_OID = proc_oid_t(124);
 constexpr proc_oid_t TRIM2_PRO_OID = proc_oid_t(143);

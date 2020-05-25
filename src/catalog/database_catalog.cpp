@@ -1744,11 +1744,18 @@ void DatabaseCatalog::BootstrapLanguages(const common::ManagedPointer<transactio
 
 void DatabaseCatalog::BootstrapProcs(const common::ManagedPointer<transaction::TransactionContext> txn) {
   auto dec_type = GetTypeOidForType(type::TypeId::DECIMAL);
+  auto int_type = GetTypeOidForType(type::TypeId::INTEGER);
 
   // ATan2
   CreateProcedure(txn, postgres::ATAN2_PRO_OID, "atan2", postgres::INTERNAL_LANGUAGE_OID,
                   postgres::NAMESPACE_DEFAULT_NAMESPACE_OID, {"y", "x"}, {dec_type, dec_type}, {dec_type, dec_type}, {},
                   dec_type, "", true);
+  // Abs
+  CreateProcedure(txn, postgres::ABS_REAL_PRO_OID, "abs", postgres::INTERNAL_LANGUAGE_OID,
+                  postgres::NAMESPACE_DEFAULT_NAMESPACE_OID, {"y"}, {dec_type}, {dec_type}, {}, dec_type, "", true);
+  // Abs
+  CreateProcedure(txn, postgres::ABS_INT_PRO_OID, "abs", postgres::INTERNAL_LANGUAGE_OID,
+                  postgres::NAMESPACE_DEFAULT_NAMESPACE_OID, {"y"}, {int_type}, {int_type}, {}, int_type, "", true);
 
 #define BOOTSTRAP_TRIG_FN(str_name, pro_oid, builtin)                                                                 \
   CreateProcedure(txn, pro_oid, str_name, postgres::INTERNAL_LANGUAGE_OID, postgres::NAMESPACE_DEFAULT_NAMESPACE_OID, \
@@ -1778,7 +1785,6 @@ void DatabaseCatalog::BootstrapProcs(const common::ManagedPointer<transaction::T
 #undef BOOTSTRAP_TRIG_FN
 
   auto str_type = GetTypeOidForType(type::TypeId::VARCHAR);
-  auto int_type = GetTypeOidForType(type::TypeId::INTEGER);
 
   // lower
   CreateProcedure(txn, postgres::LOWER_PRO_OID, "lower", postgres::INTERNAL_LANGUAGE_OID,
@@ -1820,6 +1826,16 @@ void DatabaseCatalog::BootstrapProcContexts(const common::ManagedPointer<transac
                                                                 execution::ast::Builtin::ATan2);
   txn->RegisterAbortAction([=]() { delete func_context; });
   SetProcCtxPtr(txn, postgres::ATAN2_PRO_OID, func_context);
+
+  func_context = new execution::functions::FunctionContext("abs", type::TypeId::DECIMAL, {type::TypeId::DECIMAL},
+                                                           execution::ast::Builtin::Abs);
+  SetProcCtxPtr(txn, postgres::ABS_REAL_PRO_OID, func_context);
+  txn->RegisterAbortAction([=]() { delete func_context; });
+
+  func_context = new execution::functions::FunctionContext("abs", type::TypeId::INTEGER, {type::TypeId::INTEGER},
+                                                           execution::ast::Builtin::Abs);
+  SetProcCtxPtr(txn, postgres::ABS_INT_PRO_OID, func_context);
+  txn->RegisterAbortAction([=]() { delete func_context; });
 
 #define BOOTSTRAP_TRIG_FN(str_name, pro_oid, builtin)                                                               \
   func_context =                                                                                                    \
