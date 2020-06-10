@@ -22,29 +22,28 @@ uint32_t DeferredActionManager::Process() {
   //  the point of taking oldest txn affect gc test.
   //  We could potentially more aggressively process the backlog and the deferred action queue
   //  by taking timestamp after processing each event
-  timestamp_manager_->CheckOutTimestamp();
+  return Process(timestamp_manager_->CheckOutTimestamp(), true);
+}
+
+uint32_t DeferredActionManager::Process(timestamp_t current_time, bool process_index) {
   const transaction::timestamp_t oldest_txn = timestamp_manager_->OldestTransactionStartTime();
   // Check out a timestamp from the transaction manager to determine the progress of
   // running transactions in the system.
-  const auto backlog_size = static_cast<uint32_t>(back_log_.size());
   bool daf_metrics_enabled =
       common::thread_context.metrics_store_ != nullptr &&
       common::thread_context.metrics_store_->ComponentToRecord(metrics::MetricsComponent::GARBAGECOLLECTION);
   if (daf_metrics_enabled) common::thread_context.metrics_store_->RecordDafWakeup();
 
-  uint32_t processed = ClearBacklog(oldest_txn, daf_metrics_enabled);
+  uint32_t processed = ClearBacklog(oldest_txn, current_time, daf_metrics_enabled);
   // There is no point in draining new actions if we haven't cleared the backlog.
   // This leaves some mechanisms for the rest of the system to detect congestion
   // at the deferred action manager and potentially backoff
-  if (backlog_size == processed) {
+  if (back_log_.unsafe_size() == 0) {
     // ingest all the new actions
-    processed += ProcessNewActions(oldest_txn, daf_metrics_enabled);
+    processed += ProcessNewActions(oldest_txn, current_time, daf_metrics_enabled);
   }
-  ProcessIndexes();
-  visited_slots_.clear();
-//  std::cout << "processed size" << processed << std::endl;
-//  if (daf_metrics_enabled) common::thread_context.metrics_store_->RecordQueueSize(processed);
-
+  if (process_index) ProcessIndexes();
+//  visited_slots_.clear();
   return processed;
 }
 
@@ -73,35 +72,46 @@ void DeferredActionManager::ProcessIndexes() {
   common::SharedLatch::ScopedSharedLatch guard(&indexes_latch_);
   for (const auto &index : indexes_) index->PerformGarbageCollection();
 }
-uint32_t DeferredActionManager::ClearBacklog(timestamp_t oldest_txn, bool metrics_enabled) {
+uint32_t DeferredActionManager::ClearBacklog(timestamp_t oldest_txn, timestamp_t current_time, bool metrics_enabled) {
   uint32_t processed = 0;
   // Execute as many deferred actions as we can at this time from the backlog.
   // TODO(Tianyu): This will not work if somehow the timestamps we compare against has sign bit flipped.
   //  (for uncommitted transactions, or on overflow)
   // Although that should never happen, we need to be aware that this might be a problem in the future.
-  if (metrics_enabled) common::thread_context.metrics_store_->RecordQueueSize(back_log_.size());
-//  std::cout << "backlog size" << back_log_.size() << std::endl;
-  while (!back_log_.empty() && transaction::TransactionUtil::NewerThan(oldest_txn, back_log_.front().first)) {
+  auto curr_size = back_log_.unsafe_size();
+  if (metrics_enabled) common::thread_context.metrics_store_->RecordQueueSize(curr_size);
+  std::pair<timestamp_t, std::pair<DeferredAction, DafId>> curr_action = {
+      timestamp_t(0), {[=](timestamp_t /*unused*/) {}, DafId::INVALID}};
+  while (processed != curr_size) {
+    // Try_pop would pop the front of the queue if there is at least element in queue,
+    // Since currently the deferred action queue only has one consumer, if the while loop condition is satifsfied
+    // try pop should always return true
+    bool has_item UNUSED_ATTRIBUTE = back_log_.try_pop(curr_action);
+    TERRIER_ASSERT(has_item,
+                   "With single consumer of queue, we should be able to pop front when we have not processed every "
+                   "item in the queue.");
+    if (!transaction::TransactionUtil::NewerThan(oldest_txn, curr_action.first) || !transaction::TransactionUtil::NewerThan(current_time, curr_action.first)) break;
     if (metrics_enabled) common::thread_context.resource_tracker_.Start();
-    back_log_.front().second.first(oldest_txn);
+
+    curr_action.second.first(oldest_txn);
+
     if (metrics_enabled) {
       common::thread_context.resource_tracker_.Stop();
       auto &resource_metrics = common::thread_context.resource_tracker_.GetMetrics();
-      common::thread_context.metrics_store_->RecordActionData(back_log_.front().second.second, resource_metrics);
-//      common::thread_context.metrics_store_->RecordQueueSize(1);
+      common::thread_context.metrics_store_->RecordActionData(curr_action.second.second, resource_metrics);
     }
     processed++;
-//    if (metrics_enabled) common::thread_context.metrics_store_->RecordQueueSize(1);
-    back_log_.pop();
   }
+  if (processed != curr_size && curr_action.first != INVALID_TXN_TIMESTAMP) back_log_.push(curr_action);
   return processed;
 }
 
-uint32_t DeferredActionManager::ProcessNewActions(timestamp_t oldest_txn, bool metrics_enabled) {
+uint32_t DeferredActionManager::ProcessNewActions(timestamp_t oldest_txn,
+                                                  timestamp_t current_time,
+                                                  bool metrics_enabled) {
   uint32_t processed = 0;
   std::pair<timestamp_t, std::pair<DeferredAction, DafId>> curr_action = {
       timestamp_t(0), {[=](timestamp_t /*unused*/) {}, DafId::INVALID}};
-  // bool reinsert = false;
   auto curr_size = new_deferred_actions_.unsafe_size();
 
   if (metrics_enabled) common::thread_context.metrics_store_->RecordQueueSize(curr_size);
@@ -115,7 +125,7 @@ uint32_t DeferredActionManager::ProcessNewActions(timestamp_t oldest_txn, bool m
     TERRIER_ASSERT(has_item,
                    "With single consumer of queue, we should be able to pop front when we have not processed every "
                    "item in the queue.");
-    if (!transaction::TransactionUtil::NewerThan(oldest_txn, curr_action.first)) break;
+    if (!transaction::TransactionUtil::NewerThan(oldest_txn, curr_action.first) || !transaction::TransactionUtil::NewerThan(current_time, curr_action.first)) break;
     if (metrics_enabled) common::thread_context.resource_tracker_.Start();
 
     curr_action.second.first(oldest_txn);

@@ -11,6 +11,7 @@ class MetricsManager;
 }
 
 namespace terrier::storage {
+constexpr uint8_t NUM_GC_THREADS = 3;
 
 /**
  * Class for spinning off a thread that runs garbage collection at a fixed interval. This should be used in most cases
@@ -36,7 +37,9 @@ class GarbageCollectorThread {
   void StopGC() {
     TERRIER_ASSERT(run_gc_, "GC should already be running.");
     run_gc_ = false;
-    gc_thread_.join();
+    for (auto &gc_thread : gc_threads_) {
+      gc_thread.join();
+    }
     for (uint8_t i = 0; i < transaction::MIN_GC_INVOCATIONS; i++) {
       gc_->PerformGarbageCollection();
     }
@@ -49,8 +52,12 @@ class GarbageCollectorThread {
     TERRIER_ASSERT(!run_gc_, "GC should not already be running.");
     run_gc_ = true;
     gc_paused_ = false;
-    gc_thread_ = std::thread([this] { GCThreadLoop(); });
-  }
+    for (size_t i = 0; i < NUM_GC_THREADS; i++) {
+      gc_threads_.emplace_back(std::thread([this, i] {
+        if (metrics_manager_ != DISABLED) metrics_manager_->RegisterThread();
+        GCThreadLoop(i == 0);
+      }));
+    }  }
 
   /**
    * Pause the GC from running, typically for use in tests when the state of tables need to be fixed.
@@ -79,12 +86,18 @@ class GarbageCollectorThread {
   volatile bool run_gc_;
   volatile bool gc_paused_;
   std::chrono::milliseconds gc_period_;
-  std::thread gc_thread_;
+  std::vector<std::thread> gc_threads_;
+  transaction::timestamp_t current_time_ = transaction::INVALID_TXN_TIMESTAMP;
 
-  void GCThreadLoop() {
+  void GCThreadLoop(bool main_thread) {
     while (run_gc_) {
+      auto previous_time = current_time_;
       std::this_thread::sleep_for(gc_period_);
-      if (!gc_paused_) gc_->PerformGarbageCollection();
+      if (main_thread) {
+        current_time_ = gc_->deferred_action_manager_->timestamp_manager_->CheckOutTimestamp();
+      }
+      while (current_time_ == previous_time);
+      if (!gc_paused_) gc_->PerformGarbageCollection(current_time_, main_thread);
     }
   }
 };

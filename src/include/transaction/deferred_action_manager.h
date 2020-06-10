@@ -1,5 +1,6 @@
 #pragma once
 #include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_unordered_set.h>
 #include <queue>
 #include <unordered_set>
 #include <utility>
@@ -10,6 +11,9 @@
 #include "transaction/timestamp_manager.h"
 #include "transaction/transaction_defs.h"
 
+namespace terrier::storage {
+class GarbageCollectorThread;
+}
 namespace terrier::transaction {
 
 constexpr uint8_t MIN_GC_INVOCATIONS = 3;
@@ -56,10 +60,17 @@ class DeferredActionManager {
   }
 
   /**
-   * Clear the queue and apply as many actions as possible
+   * Clear the queue and apply as many actions as possible. Used in single-threaded GC.
    * @return numbers of deferred actions processed
    */
   uint32_t Process();
+
+  /**
+   * Clear the queue and apply as many actions as possible. Used in multi-threaded GC.
+   * @param current_time timestamp of when the group of GC thread started
+   * @return numbers of deferred actions processed
+   */
+  uint32_t Process(timestamp_t current_time, bool process_index);
 
   /**
    * Invokes GC and log manager enough times to fully GC any outstanding transactions and process deferred events.
@@ -93,17 +104,18 @@ class DeferredActionManager {
   /**
    * @return Pointer to the visited tuple slot set
    */
-  std::unordered_set<storage::TupleSlot> *GetVisitedSlotsLocation() { return &visited_slots_; }
+//  tbb::concurrent_unordered_set<storage::TupleSlot> *GetVisitedSlotsLocation() { return &visited_slots_; }
 
  private:
+  friend class storage::GarbageCollectorThread;
   const common::ManagedPointer<TimestampManager> timestamp_manager_;
   // TODO(Tianyu): We might want to change this data structure to be more specialized than std::queue
   tbb::concurrent_queue<std::pair<timestamp_t, std::pair<DeferredAction, DafId>>> new_deferred_actions_;
-  std::queue<std::pair<timestamp_t, std::pair<DeferredAction, DafId>>> back_log_;
+  tbb::concurrent_queue<std::pair<timestamp_t, std::pair<DeferredAction, DafId>>> back_log_;
   // It is sufficient to truncate each version chain once in a GC invocation because we only read the maximal safe
   // timestamp once, and the version chain is sorted by timestamp. Here we keep a set of slots to truncate to avoid
   // wasteful traversals of the version chain.
-  std::unordered_set<storage::TupleSlot> visited_slots_;
+//  tbb::concurrent_unordered_set<storage::TupleSlot> visited_slots_;
 
   std::unordered_set<common::ManagedPointer<storage::index::Index>> indexes_;
   common::SharedLatch indexes_latch_;
@@ -115,8 +127,8 @@ class DeferredActionManager {
   //  added to the deferred action queue either in a fixed interval or after a threshold number of tombstones
   void ProcessIndexes();
 
-  uint32_t ClearBacklog(timestamp_t oldest_txn, bool metrics_enabled);
+  uint32_t ClearBacklog(timestamp_t oldest_txn, timestamp_t current_time, bool metrics_enabled);
 
-  uint32_t ProcessNewActions(timestamp_t oldest_txn, bool metrics_enabled);
+  uint32_t ProcessNewActions(timestamp_t oldest_txn, timestamp_t current_time, bool metrics_enabled);
 };
 }  // namespace terrier::transaction

@@ -29,6 +29,16 @@ std::pair<uint32_t, uint32_t> GarbageCollector::PerformGarbageCollection() {
   return std::make_pair(txn_manager_->NumDeallocated(), txn_manager_->NumUnlinked());
 }
 
+std::pair<uint32_t, uint32_t> GarbageCollector::PerformGarbageCollection(transaction::timestamp_t current_time, bool process_index) {
+  if (deferred_action_manager_ != DISABLED) deferred_action_manager_->Process(current_time, process_index);
+
+  // TODO(John:GC) We should be able to mimic this API interface with counters in the transaction manager that are
+  // captured by reference and incremented during the unlink and deallocate actions for the transaction contexts and
+  // then queried here.  That may require a resert mechanism and should look to eventually plug into Matt's metrics
+  // system.
+  return std::make_pair(txn_manager_->NumDeallocated(), txn_manager_->NumUnlinked());
+}
+
 void GarbageCollector::RegisterIndexForGC(common::ManagedPointer<index::Index> index) {
   deferred_action_manager_->RegisterIndexForGC(index);
 }

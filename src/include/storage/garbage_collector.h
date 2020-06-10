@@ -43,11 +43,23 @@ class GarbageCollector {
    * are no longer visible to running transactions. This needs to be invoked twice to actually free memory, since the
    * first invocation will unlink a transaction's UndoRecords, while the second time around will allow the GC to free
    * the transaction if safe to do so. The only exception is read-only transactions, which can be deallocated in a
-   * single GC pass.
+   * single GC pass. Used in single-threaded GC.
    * @return A pair of numbers: the first is the number of transactions deallocated (deleted) on this iteration, while
    * the second is the number of transactions unlinked on this iteration.
    */
   std::pair<uint32_t, uint32_t> PerformGarbageCollection();
+
+  /**
+ * Deallocates transactions that can no longer be referenced by running transactions, and unlinks UndoRecords that
+ * are no longer visible to running transactions. This needs to be invoked twice to actually free memory, since the
+ * first invocation will unlink a transaction's UndoRecords, while the second time around will allow the GC to free
+ * the transaction if safe to do so. The only exception is read-only transactions, which can be deallocated in a
+ * single GC pass. Used in multi-threaded GC.
+ * @param current_time timestamp of when the group of GC thread started
+ * @return A pair of numbers: the first is the number of transactions deallocated (deleted) on this iteration, while
+ * the second is the number of transactions unlinked on this iteration.
+ */
+  std::pair<uint32_t, uint32_t> PerformGarbageCollection(transaction::timestamp_t current_time, bool process_index);
 
   /**
    * Register an index to be periodically garbage collected
@@ -62,6 +74,7 @@ class GarbageCollector {
   void UnregisterIndexForGC(common::ManagedPointer<index::Index> index);
 
  private:
+  friend class GarbageCollectorThread;
   const common::ManagedPointer<transaction::DeferredActionManager> deferred_action_manager_;
   const common::ManagedPointer<transaction::TransactionManager> txn_manager_;
   // timestamp of the last time GC unlinked anything. We need this to know when unlinked versions are safe to deallocate
