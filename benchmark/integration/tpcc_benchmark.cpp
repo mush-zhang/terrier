@@ -442,18 +442,18 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
 // BENCHMARK REGISTRATION
 // ----------------------------------------------------------------------------
 // clang-format off
-BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithoutLogging)
-    ->Unit(benchmark::kMillisecond)
-    ->UseManualTime()
-    ->MinTime(20);
-BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithLogging)
-    ->Unit(benchmark::kMillisecond)
-    ->UseManualTime()
-    ->MinTime(20);
-BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithLoggingAndMetrics)
-    ->Unit(benchmark::kMillisecond)
-    ->UseManualTime()
-    ->MinTime(20);
+//BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithoutLogging)
+//    ->Unit(benchmark::kMillisecond)
+//    ->UseManualTime()
+//    ->MinTime(20);
+//BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithLogging)
+//    ->Unit(benchmark::kMillisecond)
+//    ->UseManualTime()
+//    ->MinTime(20);
+//BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithLoggingAndMetrics)
+//    ->Unit(benchmark::kMillisecond)
+//    ->UseManualTime()
+//    ->MinTime(20);
 BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithMetrics)
     ->Unit(benchmark::kMillisecond)
     ->UseManualTime()
