@@ -32,7 +32,7 @@ class TPCCBenchmark : public benchmark::Fixture {
    * (table sizes grow with a bigger workload)
    */
   const uint64_t blockstore_size_limit_ = 4000;
-  const uint64_t blockstore_reuse_limit_ =41000;
+  const uint64_t blockstore_reuse_limit_ = 4000;
   const uint64_t buffersegment_size_limit_ = 4000000;
   const uint64_t buffersegment_reuse_limit_ = 4000000;
   storage::BlockStore block_store_{blockstore_size_limit_, blockstore_reuse_limit_};
@@ -62,8 +62,8 @@ class TPCCBenchmark : public benchmark::Fixture {
 
   storage::GarbageCollector *gc_ = nullptr;
   storage::GarbageCollectorThread *gc_thread_ = nullptr;
-  const std::chrono::microseconds gc_period_{1000};
-  const std::chrono::microseconds metrics_period_{10000};
+  const std::chrono::microseconds gc_period_{0};
+  const std::chrono::microseconds metrics_period_{100};
 };
 
 // NOLINTNEXTLINE
