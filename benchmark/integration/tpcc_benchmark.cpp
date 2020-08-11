@@ -62,8 +62,8 @@ class TPCCBenchmark : public benchmark::Fixture {
 
   storage::GarbageCollector *gc_ = nullptr;
   storage::GarbageCollectorThread *gc_thread_ = nullptr;
-  const std::chrono::microseconds gc_period_{0};
-  const std::chrono::microseconds metrics_period_{100};
+  const std::chrono::microseconds gc_period_{1000};
+  const std::chrono::microseconds metrics_period_{10000};
 };
 
 // NOLINTNEXTLINE
