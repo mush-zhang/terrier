@@ -414,10 +414,10 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
     state.SetIterationTime(static_cast<double>(elapsed_ms) / 1000.0);
 
     std::ofstream expr_result_file(expr_result_file_name.data());
-    // num_daf_threads, num_worker_thread, time_elapsed
-    expr_result_file << BenchmarkConfig::num_daf_threads << ", " << BenchmarkConfig::num_threads << ", " << static_cast<double>(elapsed_ms) / 1000.0 << std::endl;
+    // num_worker_thread, time_elapsed
+    expr_result_file << BenchmarkConfig::num_threads << ", " << static_cast<double>(elapsed_ms) / 1000.0 << std::endl;
     expr_result_file.close();
-    
+
     // cleanup
     delete gc_thread_;
     catalog.TearDown();
