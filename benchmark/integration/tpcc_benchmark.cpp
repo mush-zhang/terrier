@@ -465,7 +465,7 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
 BENCHMARK_REGISTER_F(TPCCBenchmark, ScaleFactor4WithMetrics)
     ->Unit(benchmark::kMillisecond)
     ->UseManualTime()
-    ->MinTime(20);
+    ->MinTime(500);
 // clang-format on
 
 }  // namespace terrier::tpcc
