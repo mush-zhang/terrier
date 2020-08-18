@@ -31,10 +31,10 @@ class TPCCBenchmark : public benchmark::Fixture {
    * May need to increase this if num_threads_ or num_precomputed_txns_per_worker_ are greatly increased
    * (table sizes grow with a bigger workload)
    */
-  const uint64_t blockstore_size_limit_ = 4000;
-  const uint64_t blockstore_reuse_limit_ = 4000;
-  const uint64_t buffersegment_size_limit_ = 4000000;
-  const uint64_t buffersegment_reuse_limit_ = 4000000;
+  const uint64_t blockstore_size_limit_ = 100000;
+  const uint64_t blockstore_reuse_limit_ = 100000;
+  const uint64_t buffersegment_size_limit_ = 100000000;
+  const uint64_t buffersegment_reuse_limit_ = 100000000;
   storage::BlockStore block_store_{blockstore_size_limit_, blockstore_reuse_limit_};
   storage::RecordBufferSegmentPool buffer_pool_{buffersegment_size_limit_, buffersegment_reuse_limit_};
   std::default_random_engine generator_;
@@ -56,7 +56,7 @@ class TPCCBenchmark : public benchmark::Fixture {
    * Number of txns to run per terminal (worker thread)
    * default txn_weights. See definition for values
    */
-  const uint32_t num_precomputed_txns_per_worker_ = 200000;
+  const uint32_t num_precomputed_txns_per_worker_ = 20000000;
   TransactionWeights txn_weights_;
   common::DedicatedThreadRegistry *thread_registry_ = nullptr;
 
@@ -354,14 +354,17 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
   common::WorkerPool thread_pool(BenchmarkConfig::num_threads, {});
   std::vector<Worker> workers;
   workers.reserve(terrier::BenchmarkConfig::num_threads);
+  auto curr_num_precomputed_txns = num_precomputed_txns_per_worker_ / terrier::BenchmarkConfig::num_threads;
 
   // Precompute all of the input arguments for every txn to be run. We want to avoid the overhead at benchmark time
   const auto precomputed_args = PrecomputeArgs(&generator_, txn_weights_, terrier::BenchmarkConfig::num_threads,
-                                               num_precomputed_txns_per_worker_);
+                                               curr_num_precomputed_txns);
 
+  std::string_view expr_result_file_name = "./expr_results.csv";
   // NOLINTNEXTLINE
   for (auto _ : state) {
     thread_pool.Startup();
+    unlink(expr_result_file_name.data());
     unlink(terrier::BenchmarkConfig::logfile_path.data());
     for (const auto &file : metrics::TransactionMetricRawData::FILES) unlink(std::string(file).c_str());
     auto *const metrics_manager = new metrics::MetricsManager;
@@ -410,6 +413,11 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
 
     state.SetIterationTime(static_cast<double>(elapsed_ms) / 1000.0);
 
+    std::ofstream expr_result_file(expr_result_file_name.data());
+    // num_daf_threads, num_worker_thread, time_elapsed
+    expr_result_file << BenchmarkConfig::num_daf_threads << ", " << BenchmarkConfig::num_threads << ", " << static_cast<double>(elapsed_ms) / 1000.0 << std::endl;
+    expr_result_file.close();
+    
     // cleanup
     delete gc_thread_;
     catalog.TearDown();
@@ -433,7 +441,7 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
     }
     state.SetItemsProcessed(state.iterations() * num_new_orders);
   } else {
-    state.SetItemsProcessed(state.iterations() * num_precomputed_txns_per_worker_ *
+    state.SetItemsProcessed(state.iterations() * curr_num_precomputed_txns *
                             terrier::BenchmarkConfig::num_threads);
   }
 }
