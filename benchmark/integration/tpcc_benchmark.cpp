@@ -360,6 +360,7 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
   const auto precomputed_args = PrecomputeArgs(&generator_, txn_weights_, terrier::BenchmarkConfig::num_threads,
                                                curr_num_precomputed_txns);
 
+  std::cout << "GC | number of worker threads: " << curr_num_precomputed_txns << std::endl;
   std::string_view expr_result_file_name = "./expr_results.csv";
   // NOLINTNEXTLINE
   for (auto _ : state) {
