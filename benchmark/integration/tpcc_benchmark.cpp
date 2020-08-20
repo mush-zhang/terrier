@@ -375,13 +375,12 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
   common::WorkerPool thread_pool(BenchmarkConfig::num_threads, {});
   std::vector<Worker> workers;
   workers.reserve(terrier::BenchmarkConfig::num_threads);
-  auto curr_num_precomputed_txns = num_precomputed_txns_per_worker_ / terrier::BenchmarkConfig::num_threads;
 
   // Precompute all of the input arguments for every txn to be run. We want to avoid the overhead at benchmark time
   const auto precomputed_args = PrecomputeArgs(&generator_, txn_weights_, terrier::BenchmarkConfig::num_threads,
-                                               curr_num_precomputed_txns);
+                                               num_precomputed_txns_per_worker_);
 
-  std::cout << "GC | number of worker threads: " << curr_num_precomputed_txns << std::endl;
+  std::cout << "GC | number of worker threads: " << num_precomputed_txns_per_worker_ << std::endl;
   std::string_view expr_result_file_name = "./expr_results.csv";
   uint32_t actual_num_txns_processed = 0;
   // NOLINTNEXTLINE
