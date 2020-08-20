@@ -438,7 +438,7 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
                    shut_down);
         });
       }
-      std::this_thread::sleep_for(std::chrono::seconds(300));
+      std::this_thread::sleep_for(std::chrono::seconds(200));
       shut_down = true;
       thread_pool.WaitUntilAllFinished();
     }
