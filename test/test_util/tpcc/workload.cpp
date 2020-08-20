@@ -3,8 +3,13 @@
 
 namespace terrier::tpcc {
 
-void Workload(const int8_t worker_id, Database *const tpcc_db, transaction::TransactionManager *const txn_manager,
-              const std::vector<std::vector<TransactionArgs>> &precomputed_args, std::vector<Worker> *const workers) {
+void Workload(const int8_t worker_id,
+              Database *const tpcc_db,
+              transaction::TransactionManager *const txn_manager,
+              const std::vector<std::vector<TransactionArgs>> &precomputed_args,
+              std::vector<Worker> *const workers,
+              std::atomic<uint32_t> *txn_counter,
+              const bool &shutdown) {
   auto new_order = NewOrder(tpcc_db);
   auto payment = Payment(tpcc_db);
   auto order_status = OrderStatus(tpcc_db);
@@ -12,6 +17,9 @@ void Workload(const int8_t worker_id, Database *const tpcc_db, transaction::Tran
   auto stock_level = StockLevel(tpcc_db);
 
   for (const auto &txn_args : precomputed_args[worker_id]) {
+    if (shutdown) {
+      break;
+    }
     switch (txn_args.type_) {
       case TransactionType::NewOrder: {
         new_order.Execute(txn_manager, tpcc_db, &((*workers)[worker_id]), txn_args);
@@ -36,6 +44,7 @@ void Workload(const int8_t worker_id, Database *const tpcc_db, transaction::Tran
       default:
         throw std::runtime_error("Unexpected transaction type.");
     }
+    if (txn_counter != nullptr) (*txn_counter)++;
   }
 }
 
