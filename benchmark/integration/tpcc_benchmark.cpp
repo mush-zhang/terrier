@@ -123,7 +123,6 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithoutLogging)(benchmark::State &
                    &txn_manager,
                    precomputed_args,
                    &workers,
-                   nullptr,
                    shut_down);
         });
       }
@@ -221,7 +220,6 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithLogging)(benchmark::State &sta
                    &txn_manager,
                    precomputed_args,
                    &workers,
-                   nullptr,
                    shut_down);
         });
       }
@@ -328,7 +326,6 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithLoggingAndMetrics)(benchmark::
                    &txn_manager,
                    precomputed_args,
                    &workers,
-                   nullptr,
                    shut_down);
         });
       }
@@ -429,13 +426,12 @@ BENCHMARK_DEFINE_F(TPCCBenchmark, ScaleFactor4WithMetrics)(benchmark::State &sta
       for (uint32_t i = 0; i < terrier::BenchmarkConfig::num_threads; i++) {
         thread_pool.SubmitTask([i, tpcc_db, &txn_manager, &precomputed_args, &workers, metrics_manager, &num_txns_processed, &shut_down] {
           metrics_manager->RegisterThread();
-          Workload(i,
-                   tpcc_db,
-                   &txn_manager,
-                   precomputed_args,
-                   &workers,
-                   &num_txns_processed,
-                   shut_down);
+          num_txns_processed += Workload(i,
+                                         tpcc_db,
+                                         &txn_manager,
+                                         precomputed_args,
+                                         &workers,
+                                         shut_down);
         });
       }
       std::this_thread::sleep_for(std::chrono::seconds(200));
